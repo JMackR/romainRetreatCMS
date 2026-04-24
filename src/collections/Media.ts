@@ -14,6 +14,9 @@ import { authenticated } from '../access/authenticated'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+/** When unset, media files are stored under `public/media` for local dev. */
+const useS3 = Boolean(process.env.S3_BUCKET)
+
 export const Media: CollectionConfig = {
   slug: 'media',
   folders: true,
@@ -40,8 +43,8 @@ export const Media: CollectionConfig = {
     },
   ],
   upload: {
-    // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
-    staticDir: path.resolve(dirname, '../../public/media'),
+    // Local: `public/media`. With `S3_BUCKET`, `@payloadcms/storage-s3` sets `disableLocalStorage` and stores in S3.
+    ...(!useS3 ? { staticDir: path.resolve(dirname, '../../public/media') } : {}),
     adminThumbnail: 'thumbnail',
     focalPoint: true,
     imageSizes: [
