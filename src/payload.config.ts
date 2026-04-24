@@ -1,58 +1,76 @@
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import path from 'path'
-import { buildConfig } from 'payload'
-import { fileURLToPath } from 'url'
+/**
+ * Stack: Postgres, GraphQL + Apollo (in-app), Tailwind + shadcn.
+ * Website template collections/globals/plugins; DB remains postgresAdapter.
+ */
+import { postgresAdapter } from '@payloadcms/db-postgres'
 import sharp from 'sharp'
+import path from 'path'
+import { buildConfig, PayloadRequest } from 'payload'
+import { fileURLToPath } from 'url'
 
-import { Users } from './collections/Users'
-import { resolveDatabaseAdapter } from './payload.db.js'
+import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
+import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
+import { Users } from './collections/Users'
+import { Footer } from './Footer/config'
+import { Header } from './Header/config'
+import { plugins } from './plugins'
+import { defaultLexical } from '@/fields/defaultLexical'
+import { getServerSideURL } from './utilities/getURL'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+const pushFromEnv = () => {
+  const v = process.env.PAYLOAD_DATABASE_PUSH
+  return v === '1' || v === 'true'
+}
+
 export default buildConfig({
-  serverURL: process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://127.0.0.1:3001',
   admin: {
-    user: Users.slug,
+    components: {
+      beforeLogin: ['@/components/BeforeLogin'],
+      beforeDashboard: ['@/components/BeforeDashboard'],
+    },
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    user: Users.slug,
+    livePreview: {
+      breakpoints: [
+        { label: 'Mobile', name: 'mobile', width: 375, height: 667 },
+        { label: 'Tablet', name: 'tablet', width: 768, height: 1024 },
+        { label: 'Desktop', name: 'desktop', width: 1440, height: 900 },
+      ],
+    },
   },
-  /**
-   * CSRF: origins allowed to send Payload auth cookies. Must include the admin URL (this app, :3001),
-   * not only the headless web app (:3000), or admin Server Actions see "Unauthorized" / form state errors.
-   * Include :3002 when GraphQL is served by romainRetreatServer.
-   */
-  cors: [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://localhost:3002',
-    'http://127.0.0.1:3002',
-  ],
-  csrf: [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://localhost:3002',
-    'http://127.0.0.1:3002',
-  ],
-  collections: [Users, Media, Posts],
-  editor: lexicalEditor(),
+  editor: defaultLexical,
+  db: postgresAdapter({
+    pool: {
+      connectionString: process.env.DATABASE_URL || '',
+    },
+    push: pushFromEnv(),
+  }),
+  collections: [Pages, Posts, Media, Categories, Users],
+  cors: [getServerSideURL()].filter(Boolean),
+  globals: [Header, Footer],
+  plugins,
   secret: process.env.PAYLOAD_SECRET || '',
+  sharp,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
-  db: resolveDatabaseAdapter(),
-  graphQL: {
-    // Served by romainRetreatServer when PAYLOAD_DISABLE_GRAPHQL=true in this app's .env
-    disable: process.env.PAYLOAD_DISABLE_GRAPHQL === 'true' || process.env.PAYLOAD_DISABLE_GRAPHQL === '1',
-    schemaOutputFile: path.resolve(dirname, '..', 'schema.graphql'),
+  jobs: {
+    access: {
+      run: ({ req }: { req: PayloadRequest }): boolean => {
+        if (req.user) return true
+        const secret = process.env.CRON_SECRET
+        if (!secret) return false
+        const authHeader = req.headers.get('authorization')
+        return authHeader === `Bearer ${secret}`
+      },
+    },
+    tasks: [],
   },
-  sharp,
-  plugins: [],
 })

@@ -1,67 +1,32 @@
-# Payload Blank Template
+# Romain Retreat CMS (Payload 3)
 
-This template comes configured with the bare minimum to get started on anything you need.
+Payload admin and Next.js app. This project intentionally keeps a **fixed stack**; when pulling in features from the [official `website` template](https://github.com/payloadcms/payload/tree/3.x/templates/website), **only port the pieces you need**—do not replace these foundations:
+
+| Layer | What we use | Do not switch to |
+|--------|-------------|------------------|
+| **Database** | `@payloadcms/db-postgres` + `DATABASE_URL` (Postgres), `PAYLOAD_DATABASE_PUSH` for Drizzle push | MongoDB / `mongooseAdapter` (the upstream template defaults to Mongo) |
+| **API (public)** | Payload **GraphQL** at `/api/graphql` and the shared schema with `romainRetreatServer` | Dropping GraphQL in favor of REST-only |
+| **Client (this app)** | **Apollo Client** — `src/lib/apollo/`, `ApolloProvider`, rewrites in `next.config.mjs` | Removing Apollo for template-only `fetch` patterns (you can add both, but keep Apollo for retreat-graphql) |
+| **Styling** | **Tailwind CSS 4** + **shadcn-style** components (`components.json`, `src/components/ui/`) | Replacing with a different design system from the template wholesale |
+
+`sharp` and `@payloadcms/richtext-lexical` (Lexical) are aligned with normal Payload 3 usage.
 
 ## Quick start
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+1. `cp .env.example .env` and set `PAYLOAD_SECRET`, `DATABASE_URL` (Postgres, e.g. from `romainRetreatServer`’s `yarn db:start` + the URL in `.env.example`).
 
-## Quick Start - local setup
+2. `PAYLOAD_DATABASE_PUSH=1` on a **new** database until the schema exists; then use `0` in steady state.
 
-To spin up this template locally, follow these steps:
+3. `yarn dev` (optionally `yarn dev -p 3001` if port 3000 is taken).
 
-### Clone
+4. Admin: `/admin` — the `(app)` route in `src/app/(app)/` is the in-app demo (Apollo + GraphQL).
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+5. **GraphQL in dev with the standalone server**: set rewrites in `next.config.mjs` and `ROMAIN_RETREAT_SERVER_URL` as in `.env.example` so `/api/retreat-graphql` proxies to `romainRetreatServer`.
 
-### Development
+## Original shadcn tutorial
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+The repo started from Payload’s Tailwind + shadcn example. See [Payload: Tailwind and shadcn in the admin](https://payloadcms.com/blog/how-to-setup-tailwindcss-and-shadcn-ui-in-payload) for the general idea. Our stack and env have evolved (Postgres, Apollo, retreat GraphQL) as above.
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+## Development
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
-
-#### Docker (Optional)
-
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
-
-To do so, follow these steps:
-
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
-
-## How it works
-
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
-
-### Collections
-
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
-
-- #### Users (Authentication)
-
-  Users are auth-enabled collections that have access to the admin panel.
-
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
-
-- #### Media
-
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-### Docker
-
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
-
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+Changes under `src/` are picked up on save. Regenerate types after schema changes: `yarn generate:types`. Seed sample posts: `yarn seed:posts` (empty `posts` collection only).
