@@ -35,3 +35,33 @@ Changes under `src/` are picked up on save. Regenerate types after schema change
 
 - `yarn seed` — full demo content (1 user, 6 categories, 4 media, 3 posts with related-posts, contact form, home + contact pages, header + footer globals). Idempotent: skips when `posts` already has rows. Pass `--force` to wipe collections and reseed (destructive). Auto-runs Drizzle push, so works on a fresh DB. Same script the local Docker `db-init` container runs and the same one used to bootstrap AWS Aurora — point at any DB via `DATABASE_URL=… yarn seed` (see `../romainRetreatServer/DEPLOYMENT.md` §7 for the AWS recipe).
 - `yarn seed:posts` — narrow alternative that only adds two lorem-ipsum posts to an empty `posts` collection (useful when you don't want media downloads or pages/globals overwritten).
+
+## Reset password & user role (CLI)
+
+Use these when someone is locked out of `/admin` or hits “Unauthorized, this user does not have access to the admin panel.” Both scripts need **`DATABASE_URL`** and **`PAYLOAD_SECRET`** in `.env` (same as `yarn dev`). Point `DATABASE_URL` at whichever Postgres holds that user (local, Docker federation on `:5433`, Aurora, etc.).
+
+### Reset login password
+
+[`scripts/reset-user-password.mts`](./scripts/reset-user-password.mts) updates the user through Payload so the password is hashed correctly.
+
+```bash
+# Your chosen password (≥ 8 characters):
+RESET_EMAIL=jim@modsquad.io RESET_PASSWORD='your-new-secret' yarn tsx scripts/reset-user-password.mts
+
+# Or omit RESET_PASSWORD to generate a random one (printed once to the terminal):
+RESET_EMAIL=jim@modsquad.io yarn tsx scripts/reset-user-password.mts
+```
+
+### Promote or change role (`admin` / `contentManager` / `consumer`)
+
+Only **`admin`** and **`contentManager`** may open the Payload admin UI (`canAccessAdminPanel` in `src/access/roles.ts`). **`consumer`** accounts authenticate but see the unauthorized screen on `/admin`.
+
+[`scripts/set-user-role.mts`](./scripts/set-user-role.mts) sets `role` with `overrideAccess`, so you can fix a stuck account without logging in.
+
+```bash
+RESET_EMAIL=jim@modsquad.io RESET_ROLE=admin yarn tsx scripts/set-user-role.mts
+```
+
+`RESET_ROLE` must be one of: `admin`, `contentManager`, `consumer`.
+
+After changing **role**, click **Log out** (or clear cookies) and sign in again so the session picks up the updated role in the JWT.
