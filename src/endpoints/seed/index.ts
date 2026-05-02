@@ -171,10 +171,14 @@ export const seed = async ({
     data: post3({ heroImage: image3Doc, blockImage: image1Doc, author: demoAuthor }),
   })
 
-  // update each post with related posts
+  // update each post with related posts (disableRevalidate so seeding outside a
+  // Next.js request context — e.g. CLI `yarn seed`, Docker `db-init`, CI — doesn't
+  // trip revalidatePost's `revalidatePath()`, which throws "static generation store
+  // missing" when invoked off-request).
   await payload.update({
     id: post1Doc.id,
     collection: 'posts',
+    context: { disableRevalidate: true },
     data: {
       relatedPosts: [post2Doc.id, post3Doc.id],
     },
@@ -182,6 +186,7 @@ export const seed = async ({
   await payload.update({
     id: post2Doc.id,
     collection: 'posts',
+    context: { disableRevalidate: true },
     data: {
       relatedPosts: [post1Doc.id, post3Doc.id],
     },
@@ -189,6 +194,7 @@ export const seed = async ({
   await payload.update({
     id: post3Doc.id,
     collection: 'posts',
+    context: { disableRevalidate: true },
     data: {
       relatedPosts: [post1Doc.id, post2Doc.id],
     },
@@ -208,11 +214,13 @@ export const seed = async ({
     payload.create({
       collection: 'pages',
       depth: 0,
+      context: { disableRevalidate: true },
       data: home({ heroImage: imageHomeDoc, metaImage: image2Doc }),
     }),
     payload.create({
       collection: 'pages',
       depth: 0,
+      context: { disableRevalidate: true },
       data: contactPageData({ contactForm: contactForm }),
     }),
   ])
@@ -222,6 +230,7 @@ export const seed = async ({
   await Promise.all([
     payload.updateGlobal({
       slug: 'header',
+      context: { disableRevalidate: true },
       data: {
         navItems: [
           {
@@ -246,6 +255,7 @@ export const seed = async ({
     }),
     payload.updateGlobal({
       slug: 'footer',
+      context: { disableRevalidate: true },
       data: {
         navItems: [
           {

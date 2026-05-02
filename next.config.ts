@@ -7,15 +7,18 @@ import { redirects } from './redirects'
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
-const retreatServer = (process.env.ROMAIN_RETREAT_SERVER_URL ?? 'http://127.0.0.1:3002').replace(
+// Default to the federated Apollo Router on host port 4000 (cd ../romainRetreatServer && yarn docker:federation:up).
+// Override with `ROMAIN_RETREAT_SERVER_URL=http://romain-retreat-router-alb-….elb.amazonaws.com` on Vercel /
+// production. The legacy single-Payload-monolith on :3002 still works — set ROMAIN_RETREAT_SERVER_URL=http://127.0.0.1:3002
+// AND ROMAIN_RETREAT_SERVER_GRAPHQL_PATH=/graphql for that.
+const retreatServer = (process.env.ROMAIN_RETREAT_SERVER_URL ?? 'http://127.0.0.1:4000').replace(
   /\/$/,
   '',
 )
-const retreatGraphPath = (process.env.ROMAIN_RETREAT_SERVER_GRAPHQL_PATH ?? '/graphql').replace(
-  /\/$/,
-  '',
-)
-const retreatServerGraphQLUrl = `${retreatServer}${retreatGraphPath}`
+// Apollo Router serves at "/", Payload monolith at "/graphql" — leading slash, no trailing.
+const rawRetreatPath = process.env.ROMAIN_RETREAT_SERVER_GRAPHQL_PATH ?? '/'
+const retreatGraphPath = rawRetreatPath === '/' ? '' : rawRetreatPath.replace(/\/$/, '')
+const retreatServerGraphQLUrl = `${retreatServer}${retreatGraphPath || '/'}`
 
 /**
  * Next/Image: allow optimized fetches for virtual-hosted S3 (`bucket.s3.region...`) or a custom CDN/CloudFront host.
