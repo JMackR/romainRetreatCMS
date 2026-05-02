@@ -1,8 +1,9 @@
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { getPayload } from 'payload'
 
-import type { User } from '../payload-types'
-import { getClientSideURL } from './getURL'
+import configPromise from '@payload-config'
+import type { User } from '@/payload-types'
 
 export const getMeUser = async (args?: {
   nullUserRedirect?: string
@@ -15,29 +16,24 @@ export const getMeUser = async (args?: {
   const cookieStore = await cookies()
   const token = cookieStore.get('payload-token')?.value
 
-  const meUserReq = await fetch(`${getClientSideURL()}/api/users/me`, {
-    headers: {
-      Authorization: `JWT ${token}`,
-    },
-  })
+  const payload = await getPayload({ config: configPromise })
+  const { user } = await payload.auth({ headers: await headers() })
+  const u = user as User | null
 
-  const {
-    user,
-  }: {
-    user: User
-  } = await meUserReq.json()
-
-  if (validUserRedirect && meUserReq.ok && user) {
+  if (validUserRedirect && u) {
     redirect(validUserRedirect)
   }
 
-  if (nullUserRedirect && (!meUserReq.ok || !user)) {
+  if (nullUserRedirect && !u) {
     redirect(nullUserRedirect)
   }
 
-  // Token will exist here because if it doesn't the user will be redirected
+  if (!u) {
+    throw new Error('getMeUser: not authenticated (pass nullUserRedirect to redirect to login instead)')
+  }
+
   return {
-    token: token!,
-    user,
+    token: token ?? '',
+    user: u,
   }
 }

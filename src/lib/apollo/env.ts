@@ -1,4 +1,4 @@
-const DEFAULT_CMS_BASE = 'http://localhost:3000'
+const DEFAULT_CMS_BASE = 'http://localhost:3002'
 
 /**
  * Public GraphQL endpoint for romainRetreatServer (browsers and HttpLink).

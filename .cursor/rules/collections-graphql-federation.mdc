@@ -1,0 +1,20 @@
+---
+description: When adding Payload collections, keep Apollo Federation entity maps in sync (server).
+globs: src/collections/**/*.ts,src/payload.config.ts,src/plugins/**/*.ts
+alwaysApply: false
+---
+
+# New collections and Federation (romainRetreatServer)
+
+When you add or rename a **collection** that exposes a GraphQL document type (e.g. new `src/collections/...` entry or a plugin in `src/plugins/`), the federated domain subgraphs need the type registered.
+
+**Update the server repo** `romainRetreatServer/src/federation/entityModel.ts`:
+
+1. **`ENTITY_TYPE_OWNER`** — set the document GraphQL type name to one of: `users` | `groups` | `search` | `content` | `system` (this is the *owning* subgraph for that entity).
+2. **`ENTITY_TYPE_TO_COLLECTION`** — map the same type name to the exact Payload **`collection` slug** used in `findByID` (same `slug` as the collection / plugin `collection` in config).
+
+**Do not** add value-only types, sessions, or list/connection types that are **not** top-level document objects with a root **`id: Int!`** or **`id: ID!`**. The federation pass only keys those; everything else is left as-is (no `@key` / no reference stub from this step).
+
+**Quick check:** After changes, the GraphQL `type` name in the exported SDL usually matches the collection (e.g. slug `groupPosts` → `GroupPost`).
+
+If you only change fields inside an existing collection and the slug/type name is unchanged, you do **not** need to touch `entityModel.ts`.

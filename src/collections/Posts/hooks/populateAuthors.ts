@@ -1,5 +1,7 @@
 import type { CollectionAfterReadHook } from 'payload'
-import { User } from 'src/payload-types'
+
+import { getUserDisplayName } from '@/utilities/userDisplayName'
+import type { User } from 'src/payload-types'
 
 // The `user` collection has access control locked so that users are not publicly accessible
 // This means that we need to populate the authors manually here to protect user privacy
@@ -24,7 +26,7 @@ export const populateAuthors: CollectionAfterReadHook = async ({ doc, req, req: 
         if (authorDocs.length > 0) {
           doc.populatedAuthors = authorDocs.map((authorDoc) => ({
             id: authorDoc.id,
-            name: authorDoc.name,
+            name: getUserDisplayName(authorDoc),
           }))
         }
       } catch {

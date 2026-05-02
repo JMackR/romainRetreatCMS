@@ -1,12 +1,17 @@
 import canUseDOM from './canUseDOM'
 
+/** Local dev when `NEXT_PUBLIC_SERVER_URL` is unset: match `next dev` / project port (see `.env.example`). */
+const localDevHttpBase = () =>
+  `http://localhost:${process.env.PORT || process.env.NEXT_DEV_PORT || '3002'}`
+
 export const getServerSideURL = () => {
-  return (
-    process.env.NEXT_PUBLIC_SERVER_URL ||
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : 'http://localhost:3000')
-  )
+  if (process.env.NEXT_PUBLIC_SERVER_URL) {
+    return process.env.NEXT_PUBLIC_SERVER_URL
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  }
+  return localDevHttpBase()
 }
 
 export const getClientSideURL = () => {
@@ -22,5 +27,5 @@ export const getClientSideURL = () => {
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   }
 
-  return process.env.NEXT_PUBLIC_SERVER_URL || ''
+  return process.env.NEXT_PUBLIC_SERVER_URL || localDevHttpBase()
 }

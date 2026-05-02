@@ -72,6 +72,14 @@ export interface Config {
     media: Media;
     categories: Category;
     users: User;
+    groups: Group;
+    groupMembers: GroupMember;
+    groupPosts: GroupPost;
+    groupComments: GroupComment;
+    groupPostLikes: GroupPostLike;
+    groupCommentLikes: GroupCommentLike;
+    groupEvents: GroupEvent;
+    groupInvites: GroupInvite;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -94,6 +102,14 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    groups: GroupsSelect<false> | GroupsSelect<true>;
+    groupMembers: GroupMembersSelect<false> | GroupMembersSelect<true>;
+    groupPosts: GroupPostsSelect<false> | GroupPostsSelect<true>;
+    groupComments: GroupCommentsSelect<false> | GroupCommentsSelect<true>;
+    groupPostLikes: GroupPostLikesSelect<false> | GroupPostLikesSelect<true>;
+    groupCommentLikes: GroupCommentLikesSelect<false> | GroupCommentLikesSelect<true>;
+    groupEvents: GroupEventsSelect<false> | GroupEventsSelect<true>;
+    groupInvites: GroupInvitesSelect<false> | GroupInvitesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -227,7 +243,8 @@ export interface Page {
 export interface Post {
   id: number;
   title: string;
-  content?: {
+  heroImage?: (number | null) | Media;
+  content: {
     root: {
       type: string;
       children: {
@@ -241,9 +258,33 @@ export interface Post {
       version: number;
     };
     [k: string]: unknown;
-  } | null;
+  };
+  relatedPosts?: (number | Post)[] | null;
+  categories?: (number | Category)[] | null;
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  publishedAt?: string | null;
+  authors?: (number | User)[] | null;
+  populatedAuthors?:
+    | {
+        id?: string | null;
+        name?: string | null;
+      }[]
+    | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
   updatedAt: string;
   createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -363,6 +404,63 @@ export interface FolderInterface {
   folderType?: 'media'[] | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  title: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  parent?: (number | null) | Category;
+  breadcrumbs?:
+    | {
+        doc?: (number | null) | Category;
+        url?: string | null;
+        label?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Admins manage roles and site-wide settings. Content managers can create pages and posts. Consumers use the public site and groups only.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  /**
+   * Defaults to consumer. Public sign-up is always consumer. An admin can assign other roles when creating users. On the first user, choose Admin in this field if the site has no other administrator yet.
+   */
+  role: 'admin' | 'contentManager' | 'consumer';
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -505,30 +603,6 @@ export interface ArchiveBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'archive';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categories".
- */
-export interface Category {
-  id: number;
-  title: string;
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  parent?: (number | null) | Category;
-  breadcrumbs?:
-    | {
-        doc?: (number | null) | Category;
-        url?: string | null;
-        label?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -732,28 +806,140 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
+ * via the `definition` "groups".
  */
-export interface User {
+export interface Group {
   id: number;
+  name: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  cover?: (number | null) | Media;
+  shortDescription?: string | null;
+  about?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  privacy?: ('public' | 'private') | null;
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupMembers".
+ */
+export interface GroupMember {
+  id: number;
+  group: number | Group;
+  user: number | User;
+  role: 'admin' | 'moderator' | 'member';
+  status: 'active' | 'invited' | 'left';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupPosts".
+ */
+export interface GroupPost {
+  id: number;
+  group: number | Group;
+  /**
+   * Set by the post creator (or from your session on the site).
+   */
+  author?: (number | null) | User;
+  authorName?: string | null;
+  postType: 'discussion' | 'question' | 'announcement';
+  text: string;
+  /**
+   * If off, members cannot add new comments on this post.
+   */
+  commentsEnabled?: boolean | null;
+  photos?: (number | Media)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupComments".
+ */
+export interface GroupComment {
+  id: number;
+  post: number | GroupPost;
+  /**
+   * Set from the signed-in user on create (beforeChange).
+   */
+  author?: (number | null) | User;
+  authorName?: string | null;
+  text: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupPostLikes".
+ */
+export interface GroupPostLike {
+  id: number;
+  post: number | GroupPost;
+  user: number | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupCommentLikes".
+ */
+export interface GroupCommentLike {
+  id: number;
+  comment: number | GroupComment;
+  user: number | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupEvents".
+ */
+export interface GroupEvent {
+  id: number;
+  group: number | Group;
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  startsAt: string;
+  endsAt?: string | null;
+  cover?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupInvites".
+ */
+export interface GroupInvite {
+  id: number;
+  group: number | Group;
+  invitedBy: number | User;
   email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
+  message?: string | null;
+  status?: ('pending' | 'accepted' | 'declined') | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -966,6 +1152,38 @@ export interface PayloadLockedDocument {
         value: number | User;
       } | null)
     | ({
+        relationTo: 'groups';
+        value: number | Group;
+      } | null)
+    | ({
+        relationTo: 'groupMembers';
+        value: number | GroupMember;
+      } | null)
+    | ({
+        relationTo: 'groupPosts';
+        value: number | GroupPost;
+      } | null)
+    | ({
+        relationTo: 'groupComments';
+        value: number | GroupComment;
+      } | null)
+    | ({
+        relationTo: 'groupPostLikes';
+        value: number | GroupPostLike;
+      } | null)
+    | ({
+        relationTo: 'groupCommentLikes';
+        value: number | GroupCommentLike;
+      } | null)
+    | ({
+        relationTo: 'groupEvents';
+        value: number | GroupEvent;
+      } | null)
+    | ({
+        relationTo: 'groupInvites';
+        value: number | GroupInvite;
+      } | null)
+    | ({
         relationTo: 'redirects';
         value: number | Redirect;
       } | null)
@@ -1168,9 +1386,30 @@ export interface FormBlockSelect<T extends boolean = true> {
  */
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
+  heroImage?: T;
   content?: T;
+  relatedPosts?: T;
+  categories?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  publishedAt?: T;
+  authors?: T;
+  populatedAuthors?:
+    | T
+    | {
+        id?: T;
+        name?: T;
+      };
+  generateSlug?: T;
+  slug?: T;
   updatedAt?: T;
   createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1291,6 +1530,9 @@ export interface CategoriesSelect<T extends boolean = true> {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  firstName?: T;
+  lastName?: T;
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1307,6 +1549,109 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groups_select".
+ */
+export interface GroupsSelect<T extends boolean = true> {
+  name?: T;
+  generateSlug?: T;
+  slug?: T;
+  cover?: T;
+  shortDescription?: T;
+  about?: T;
+  privacy?: T;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupMembers_select".
+ */
+export interface GroupMembersSelect<T extends boolean = true> {
+  group?: T;
+  user?: T;
+  role?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupPosts_select".
+ */
+export interface GroupPostsSelect<T extends boolean = true> {
+  group?: T;
+  author?: T;
+  authorName?: T;
+  postType?: T;
+  text?: T;
+  commentsEnabled?: T;
+  photos?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupComments_select".
+ */
+export interface GroupCommentsSelect<T extends boolean = true> {
+  post?: T;
+  author?: T;
+  authorName?: T;
+  text?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupPostLikes_select".
+ */
+export interface GroupPostLikesSelect<T extends boolean = true> {
+  post?: T;
+  user?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupCommentLikes_select".
+ */
+export interface GroupCommentLikesSelect<T extends boolean = true> {
+  comment?: T;
+  user?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupEvents_select".
+ */
+export interface GroupEventsSelect<T extends boolean = true> {
+  group?: T;
+  title?: T;
+  description?: T;
+  location?: T;
+  startsAt?: T;
+  endsAt?: T;
+  cover?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "groupInvites_select".
+ */
+export interface GroupInvitesSelect<T extends boolean = true> {
+  group?: T;
+  invitedBy?: T;
+  email?: T;
+  message?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1705,14 +2050,55 @@ export interface TaskSchedulePublish {
   input: {
     type?: ('publish' | 'unpublish') | null;
     locale?: string | null;
-    doc?: {
-      relationTo: 'pages';
-      value: number | Page;
-    } | null;
+    doc?:
+      | ({
+          relationTo: 'pages';
+          value: number | Page;
+        } | null)
+      | ({
+          relationTo: 'posts';
+          value: number | Post;
+        } | null);
     global?: string | null;
     user?: (number | null) | User;
   };
   output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "BannerBlock".
+ */
+export interface BannerBlock {
+  style: 'info' | 'warning' | 'error' | 'success';
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'banner';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CodeBlock".
+ */
+export interface CodeBlock {
+  language?: ('typescript' | 'javascript' | 'css') | null;
+  code: string;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'code';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

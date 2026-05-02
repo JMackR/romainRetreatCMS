@@ -9,6 +9,14 @@ import { buildConfig, PayloadRequest } from 'payload'
 import { fileURLToPath } from 'url'
 
 import { Categories } from './collections/Categories'
+import { GroupCommentLikes } from './collections/GroupCommentLikes'
+import { GroupComments } from './collections/GroupComments'
+import { GroupEvents } from './collections/GroupEvents'
+import { GroupInvites } from './collections/GroupInvites'
+import { GroupMembers } from './collections/GroupMembers'
+import { GroupPostLikes } from './collections/GroupPostLikes'
+import { GroupPosts } from './collections/GroupPosts'
+import { Groups } from './collections/Groups'
 import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
@@ -52,7 +60,21 @@ export default buildConfig({
     },
     push: pushFromEnv(),
   }),
-  collections: [Pages, Posts, Media, Categories, Users],
+  collections: [
+    Pages,
+    Posts,
+    Media,
+    Categories,
+    Users,
+    Groups,
+    GroupMembers,
+    GroupPosts,
+    GroupComments,
+    GroupPostLikes,
+    GroupCommentLikes,
+    GroupEvents,
+    GroupInvites,
+  ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins,
