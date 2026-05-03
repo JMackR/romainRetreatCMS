@@ -1,18 +1,17 @@
-# AWS CodeBuild — used by CodePipeline (GitHub source via CodeStar Connections).
+# AWS CodeBuild — THIS REPO USES YARN (yarn.lock), NOT npm.
 #
-# Repo layouts:
-#   • CMS-only repo: package.json at repo root — build runs here.
-#   • Monorepo: romainRetreatCMS/ subfolder — script cds into it when present.
+# If logs still show `npm run build`, CodeBuild is ignoring this file. Fix:
+#   CodeBuild → Edit → Buildspec → use BUILD SPEC FILE → path `buildspec.yml`
+#   (same path as package.json in the cloned repo).
 #
-# Tailwind CSS v4 (@tailwindcss/postcss → @tailwindcss/oxide) needs a **native**
-# binding on Linux CI (@tailwindcss/oxide-linux-x64-gnu). npm occasionally skips
-# optional deps (npm/cli#4828); we install explicitly if missing. Prefer **yarn**
-# for this repo (yarn.lock). If your pipeline uses `npm ci`, run:
-#   npm ci --include=optional
-#
-# Build-time env: set in CodeBuild → Environment variables (see docs/aws-codepipeline-github.md).
+# Tailwind v4 needs @tailwindcss/oxide-* native addons on Linux; install fallback below.
 
 version: 0.2
+
+env:
+  variables:
+    # npm ci / production-style installs can omit optional deps; yarn + oxide fallback needs dev graph
+    NODE_ENV: development
 
 phases:
   install:
@@ -20,7 +19,7 @@ phases:
       nodejs: 20
     commands:
       - |
-        set -e
+        set -euxo pipefail
         echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"
         cd "$CODEBUILD_SRC_DIR"
         if [ -d romainRetreatCMS ]; then
@@ -28,18 +27,21 @@ phases:
         fi
         pwd
         node -v
-        corepack enable || true
-        yarn install --frozen-lockfile
-        # Ensure Tailwind Oxide native module on Linux CodeBuild (fixes next/font + postcss)
+        # Starter templates often only have npm — install Yarn 1.x explicitly (matches yarn.lock).
+        if ! command -v yarn >/dev/null 2>&1; then
+          npm install -g yarn@1.22.22
+        fi
+        yarn --version
+        rm -rf node_modules .next
+        yarn install --frozen-lockfile --network-timeout 300000
+        # Belt-and-suspenders for Tailwind Oxide on Amazon Linux (x86_64 / aarch64).
         if [ "$(uname -s)" = "Linux" ]; then
           ARCH=$(uname -m)
           if [ "$ARCH" = "x86_64" ] && [ ! -d node_modules/@tailwindcss/oxide-linux-x64-gnu ]; then
-            echo "Installing @tailwindcss/oxide-linux-x64-gnu for Tailwind v4"
             npm install @tailwindcss/oxide-linux-x64-gnu@4.2.4 --no-save --include=optional \
               || npm install @tailwindcss/oxide-linux-x64-gnu@4.2.4 --no-save
           fi
           if [ "$ARCH" = "aarch64" ] && [ ! -d node_modules/@tailwindcss/oxide-linux-arm64-gnu ]; then
-            echo "Installing @tailwindcss/oxide-linux-arm64-gnu for Tailwind v4"
             npm install @tailwindcss/oxide-linux-arm64-gnu@4.2.4 --no-save --include=optional \
               || npm install @tailwindcss/oxide-linux-arm64-gnu@4.2.4 --no-save
           fi
@@ -48,11 +50,12 @@ phases:
   build:
     commands:
       - |
-        set -e
+        set -euxo pipefail
         cd "$CODEBUILD_SRC_DIR"
         if [ -d romainRetreatCMS ]; then
           cd romainRetreatCMS
         fi
+        echo "Running yarn build (not npm)"
         yarn build
 
   post_build:

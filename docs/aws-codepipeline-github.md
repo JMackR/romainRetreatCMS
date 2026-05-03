@@ -100,3 +100,15 @@ Avoid committing **both** `yarn.lock` and `package-lock.json` out of sync; pick 
 ### AWS starter pipeline (`SimpleNodeJSBuildProject`, etc.)
 
 Those templates often default to **npm** and a minimal install. Either switch **Install commands** to **`yarn install --frozen-lockfile`** (after `corepack enable`) or apply the optional-deps fixes above.
+
+### Logs still say `npm run build --if-present`
+
+That means CodeBuild is **not using** the repo’s **`buildspec.yml`** (it’s using the starter “managed” commands).
+
+1. Open **CodeBuild** → your project → **Edit** → **Buildspec**.
+2. Choose **Use a buildspec file** (not “Insert build commands”).
+3. **Buildspec name:** `buildspec.yml`  
+   - Monorepo only: `romainRetreatCMS/buildspec.yml` (must match where the file lives **in Git** relative to repo root).
+4. Save, then **release change** on the pipeline.
+
+This repo is **Yarn 1** (`yarn.lock` only — **do not** rely on `package-lock.json`). `package.json` sets `"packageManager": "yarn@1.22.22"` for tooling that respects Corepack.
