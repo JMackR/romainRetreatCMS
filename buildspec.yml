@@ -1,7 +1,6 @@
 # AWS CodeBuild - Yarn + Next.js (see docs/aws-codepipeline-github.md).
 #
-# Console "Buildspec name": use buildspec.yml (repo root). Do not prefix with @ or romainRetreatCMS/.
-# No artifacts: omit `artifacts:`. No cache on project: omit `cache:` (add paths only if you enable S3/local cache).
+# Project source/artifacts type CODEPIPELINE: keep `artifacts:` below. For NO_ARTIFACTS + NO_SOURCE only, remove it.
 #
 version: "0.2"
 
@@ -51,3 +50,10 @@ phases:
         fi
         echo "Running yarn build"
         yarn build
+
+artifacts:
+  files:
+    - "**/*"
+  exclude-paths:
+    - node_modules/**/*
+    - romainRetreatCMS/node_modules/**/*

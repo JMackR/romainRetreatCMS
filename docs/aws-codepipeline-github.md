@@ -121,18 +121,50 @@ AWS validates the **whole** buildspec against your CodeBuild project settings. T
 | **No artifacts** | None | **Do not** declare an **`artifacts:`** block. |
 | **CodePipeline** or **Amazon S3** | Usually one or more (e.g. `BuildOutput`) | **Must** declare **`artifacts:`** (see repo `buildspec.yml`). |
 
-This repo’s [`aws/codepipeline-github.yaml`](../aws/codepipeline-github.yaml) uses **CODEPIPELINE** artifacts and **`BuildOutput`**, so the checked-in **`buildspec.yml` includes `artifacts:`**. If your CodeBuild project is still **No artifacts**, either switch it to **CodePipeline** to match the file, or delete the **`artifacts:`** block (and any pipeline output that expects a build artifact).
+The repo root [`buildspec.yml`](../buildspec.yml) omits **`artifacts:`** so it matches CodeBuild **No artifacts** (typical for CI-only). If you switch the project to **CodePipeline** or **S3** artifacts (or add a pipeline output artifact), add an **`artifacts:`** block again — see the YAML snippet in [§2](#2-deploy-the-cloudformation-stack).
 
 Also confirm **Buildspec name** matches Git (e.g. `buildspec.yml` vs `romainRetreatCMS/buildspec.yml`) and you are not pasting a fragment into **Buildspec override** in the pipeline action.
 
+### “Invalid YAML” when clicking **Update project** (`SimpleNodeJSBuildProject-…`, CodePipeline Node starter)
+
+The official **CodePipeline → CI Node.js** CloudFormation starter ([`ci-build-nodejs.yaml`](https://github.com/aws/codepipeline-starter-templates/blob/main/templates/cloudformation/ci-build-nodejs.yaml)) defines CodeBuild as:
+
+- **`Source` type: `NO_SOURCE`** (“No source” in the console)
+- **`BuildSpec`:** inline YAML (default `npm install` / `npm run build --if-present` / `npm test`), **not** your repo file
+
+With **`NO_SOURCE`**, the project **must** carry a valid **inline** buildspec in AWS. If you switch the editor to **Use a buildspec file** / `buildspec.yml` while the source type is still **No source**, the console often rejects **Update project** with **“buildspec must be a valid YAML file”** — even though `buildspec.yml` in Git is fine. Your GitHub file is **ignored** until the project is wired to use the pipeline artifact + a file buildspec.
+
+**Why “CodePipeline” is not in the Source dropdown:** The console only lists **No source**, **GitHub**, **S3**, **CodeCommit**, etc. **`CODEPIPELINE` is a valid API source type** but it usually **does not appear** when you edit the project from the CodeBuild console alone ([AWS docs](https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html)). Starter stacks still wire the pipeline to your project correctly; you fix the buildspec separately.
+
+**Fix A — stay on “No source”, use inline YAML (console only)**  
+
+1. **Source** → leave **No source**.  
+2. **Buildspec** → open the editor that accepts **full buildspec YAML** (multi-phase `version` / `phases` / …), **not** the single-line “build commands only” helper if your UI offers both.  
+3. Paste the **entire** contents of your repo [`buildspec.yml`](../buildspec.yml).  
+4. **Update project**.
+
+You maintain the same YAML in the console or in the stack parameter **`CICodeBuildSpec`** — Git-only `buildspec.yml` is ignored until you use Fix B.
+
+**Fix B — keep using the repo file (`buildspec.yml`): use the CLI**
+
+Point the project at the pipeline artifact and the filename checked in to Git (paths are relative to the **unzipped pipeline source artifact**):
+
+```bash
+aws codebuild update-project \
+  --region us-east-1 \
+  --name SimpleNodeJSBuildProject-0affd3e282db \
+  --source type=CODEPIPELINE,buildspec=buildspec.yml \
+  --artifacts type=CODEPIPELINE
+```
+
+AWS requires **both** `source` and `artifacts` type **`CODEPIPELINE`** when switching off the starter’s **NO_SOURCE** / **NO_ARTIFACTS** pair; otherwise `UpdateProject` returns `InvalidInputException`.
+
+Replace **region** and **project name**. Omit `buildspec=` to default to `buildspec.yml`. After this, the repo [`buildspec.yml`](../buildspec.yml) must include an **`artifacts:`** block (included in this repo when using **CODEPIPELINE** artifacts).
+
+Do **not** use **No source** + **Use a buildspec file** in the console only — that combination often triggers **“buildspec must be a valid YAML file”** on **Update project**.
+
 ### Logs still say `npm run build --if-present`
 
-That means CodeBuild is **not using** the repo’s **`buildspec.yml`** (it’s using the starter “managed” commands).
-
-1. Open **CodeBuild** → your project → **Edit** → **Buildspec**.
-2. Choose **Use a buildspec file** (not “Insert build commands”).
-3. **Buildspec name:** `buildspec.yml`  
-   - Monorepo only: `romainRetreatCMS/buildspec.yml` (must match where the file lives **in Git** relative to repo root).
-4. Save, then **release change** on the pipeline.
+The starter **inline** buildspec is still active. Apply **Fix A** or **Fix B** above so the project runs **yarn** from your YAML instead of the default npm commands.
 
 This repo is **Yarn 1** (`yarn.lock` only — **do not** rely on `package-lock.json`). `package.json` sets `"packageManager": "yarn@1.22.22"` for tooling that respects Corepack.
