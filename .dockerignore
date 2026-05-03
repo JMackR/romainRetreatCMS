@@ -1,0 +1,15 @@
+.git
+.github
+.next
+node_modules
+*.md
+.env
+.env.*
+!.env.example
+!.env.production
+!.env.development
+coverage
+.vscode
+.cursor
+terminals
+*.log

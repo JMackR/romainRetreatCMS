@@ -2,7 +2,7 @@
 
 Payload admin and Next.js app. This project intentionally keeps a **fixed stack**; when pulling in features from the [official `website` template](https://github.com/payloadcms/payload/tree/3.x/templates/website), **only port the pieces you need**—do not replace these foundations:
 
-> **Deploying?** End-to-end recipes (Vercel + AWS Aurora seed + the federated GraphQL backend the CMS talks to) live in [`../romainRetreatServer/DEPLOYMENT.md`](../romainRetreatServer/DEPLOYMENT.md). The §8 ("Vercel — deploy the CMS") section covers the env vars and S3/CORS notes for this app specifically.
+> **Deploying on AWS?** CI: [`buildspec.yml`](./buildspec.yml) + [`docs/aws-codepipeline-github.md`](./docs/aws-codepipeline-github.md). Run the CMS container behind an ALB and Route 53: [`docs/aws-cms-hosting.md`](./docs/aws-cms-hosting.md). Backend/Aurora/federation context still lives in [`../romainRetreatServer/DEPLOYMENT.md`](../romainRetreatServer/DEPLOYMENT.md) (server-focused; align CMS `DATABASE_URL` / `ROMAIN_RETREAT_SERVER_*` with that stack).
 >
 > **AWS + Bitbucket → Amplify Hosting:** [`amplify.yml`](./amplify.yml) + [`docs/aws-bitbucket-amplify.md`](./docs/aws-bitbucket-amplify.md).
 >

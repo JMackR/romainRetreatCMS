@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 // Default to the federated Apollo Router on host port 4000 (cd ../romainRetreatServer && yarn docker:federation:up).
-// Override with `ROMAIN_RETREAT_SERVER_URL=http://romain-retreat-router-alb-….elb.amazonaws.com` on Vercel /
-// production. The legacy single-Payload-monolith on :3002 still works — set ROMAIN_RETREAT_SERVER_URL=http://127.0.0.1:3002
+// Override with `ROMAIN_RETREAT_SERVER_URL=http://romain-retreat-router-alb-….elb.amazonaws.com` in production.
+// The legacy single-Payload-monolith on :3002 still works — set ROMAIN_RETREAT_SERVER_URL=http://127.0.0.1:3002
 // AND ROMAIN_RETREAT_SERVER_GRAPHQL_PATH=/graphql for that.
 const retreatServer = (process.env.ROMAIN_RETREAT_SERVER_URL ?? 'http://127.0.0.1:4000').replace(
   /\/$/,
@@ -66,11 +66,22 @@ const s3MediaRemotePatterns = (() => {
   return []
 })()
 
-const NEXT_PUBLIC_SERVER_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  : process.env.__NEXT_PRIVATE_ORIGIN || 'http://localhost:3000'
+const resolvePublicSiteUrl = (): string => {
+  const raw =
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    process.env.PAYLOAD_SERVER_URL ||
+    process.env.__NEXT_PRIVATE_ORIGIN
+  if (raw) {
+    const trimmed = raw.replace(/\/$/, '')
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+  }
+  return 'http://localhost:3000'
+}
+
+const NEXT_PUBLIC_SERVER_URL = resolvePublicSiteUrl()
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   eslint: {
     ignoreDuringBuilds: true,
   },

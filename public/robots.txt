@@ -3,9 +3,9 @@ User-agent: *
 Disallow: /admin/*
 
 # Host
-Host: https://example.com
+Host: https://cms.rrcliving.com
 
 # Sitemaps
-Sitemap: https://example.com/sitemap.xml
-Sitemap: https://example.com/pages-sitemap.xml
-Sitemap: https://example.com/posts-sitemap.xml
+Sitemap: https://cms.rrcliving.com/sitemap.xml
+Sitemap: https://cms.rrcliving.com/pages-sitemap.xml
+Sitemap: https://cms.rrcliving.com/posts-sitemap.xml

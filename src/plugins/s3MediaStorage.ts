@@ -6,18 +6,18 @@ const region = process.env.S3_REGION
 const keyPrefix = process.env.S3_KEY_PREFIX
 
 /**
- * Browser → S3 uploads (pre-signed) so the server is not the request body. Required on Vercel (~4.5MB cap).
+ * Browser → S3 uploads (pre-signed) so the server is not the request body. Optional on AWS (ALB/ECS can use larger server bodies).
  * @see https://github.com/payloadcms/payload/tree/3.x/packages/storage-s3
  *
- * S3 bucket CORS: allow your Vercel/preview and production origins, with PUT (and the headers the SDK uses).
- * Set S3_USE_CLIENT_UPLOADS=1 to use client uploads off Vercel (e.g. local S3 + CORS for localhost).
- * Set S3_USE_CLIENT_UPLOADS=0 to force server-side upload (only practical for small files on Vercel).
+ * S3 bucket CORS: allow your CMS origins (localhost, https://cms.rrcliving.com, etc.) with PUT and the headers the SDK uses.
+ * Set S3_USE_CLIENT_UPLOADS=1 for direct browser → S3 uploads (e.g. large files, or strict server body limits).
+ * Set S3_USE_CLIENT_UPLOADS=0 (default) for server-side upload via Payload.
  */
 function s3ClientUploadsEnabled(): boolean {
   const ex = process.env.S3_USE_CLIENT_UPLOADS
   if (ex === '0' || ex === 'false') return false
   if (ex === '1' || ex === 'true') return true
-  return Boolean(process.env.VERCEL)
+  return false
 }
 
 const s3ObjectPublicUrl = (fileKey: string) => {

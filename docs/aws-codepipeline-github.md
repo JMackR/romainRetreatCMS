@@ -6,8 +6,10 @@ This project ships:
 |------|---------|
 | [`buildspec.yml`](../buildspec.yml) | CodeBuild install + `yarn build` (supports CMS-at-root **or** `romainRetreatCMS/` monorepo folder). |
 | [`aws/codepipeline-github.yaml`](../aws/codepipeline-github.yaml) | CloudFormation: S3 artifact bucket, **CodeStar Connection** (GitHub), CodeBuild project, CodePipeline (**Source → Build**). |
+| [`Dockerfile`](../Dockerfile) | Production container (`next build` **standalone**) for ECS / App Runner / EC2. |
+| [`aws-cms-hosting.md`](./aws-cms-hosting.md) | ALB + Route 53 + ECS outline for **`cms.rrcliving.com`**. |
 
-The pipeline **only runs CI** (verify the Next.js app builds). It does **not** deploy to ECS/EC2/Lambda by default — add a **Deploy** stage when you have a target.
+The pipeline **only runs CI** (verify the Next.js app builds). It does **not** deploy the container by default — add a **Deploy** stage (ECR push + ECS) or run [`aws-cms-hosting.md`](./aws-cms-hosting.md) manually.
 
 ## 1. Prerequisites
 
