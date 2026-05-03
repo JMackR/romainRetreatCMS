@@ -1,16 +1,10 @@
-# AWS CodeBuild — THIS REPO USES YARN (yarn.lock), NOT npm.
-#
-# If logs still show `npm run build`, CodeBuild is ignoring this file. Fix:
-#   CodeBuild → Edit → Buildspec → use BUILD SPEC FILE → path `buildspec.yml`
-#   (same path as package.json in the cloned repo).
-#
-# Tailwind v4 needs @tailwindcss/oxide-* native addons on Linux; install fallback below.
+# AWS CodeBuild - Yarn + Next.js (see docs/aws-codepipeline-github.md).
+# CodeBuild Buildspec must be strict YAML: ASCII comments only, booleans as true/false.
 
 version: 0.2
 
 env:
   variables:
-    # npm ci / production-style installs can omit optional deps; yarn + oxide fallback needs dev graph
     NODE_ENV: development
 
 phases:
@@ -27,14 +21,12 @@ phases:
         fi
         pwd
         node -v
-        # Starter templates often only have npm — install Yarn 1.x explicitly (matches yarn.lock).
         if ! command -v yarn >/dev/null 2>&1; then
           npm install -g yarn@1.22.22
         fi
         yarn --version
         rm -rf node_modules .next
         yarn install --frozen-lockfile --network-timeout 300000
-        # Belt-and-suspenders for Tailwind Oxide on Amazon Linux (x86_64 / aarch64).
         if [ "$(uname -s)" = "Linux" ]; then
           ARCH=$(uname -m)
           if [ "$ARCH" = "x86_64" ] && [ ! -d node_modules/@tailwindcss/oxide-linux-x64-gnu ]; then
@@ -55,12 +47,15 @@ phases:
         if [ -d romainRetreatCMS ]; then
           cd romainRetreatCMS
         fi
-        echo "Running yarn build (not npm)"
+        echo "Running yarn build"
         yarn build
 
   post_build:
     commands:
-      - echo "build finished $(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$CODEBUILD_SRC_DIR/codebuild-build-marker.txt"
+      - |
+        set -e
+        TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        echo "build finished ${TS}" > "$CODEBUILD_SRC_DIR/codebuild-build-marker.txt"
 
 cache:
   paths:
@@ -70,4 +65,4 @@ cache:
 artifacts:
   files:
     - codebuild-build-marker.txt
-  discard-paths: yes
+  discard-paths: true
