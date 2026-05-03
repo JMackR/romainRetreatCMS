@@ -41,7 +41,7 @@ aws cloudformation deploy \
 
 Stack outputs print `GitHubConnectionArn` and a console link to the pipeline.
 
-**CloudFormation vs console “No artifacts”:** This template sets CodeBuild artifacts to **CodePipeline** and defines **`BuildOutput`**. The repo root **`buildspec.yml`** defaults to **no `artifacts:`** so it matches starter projects with **No artifacts**. After you deploy this stack, append something like the following before `cache:` (and push), or validation/build will fail:
+**CloudFormation vs console “No artifacts”:** This template sets CodeBuild artifacts to **CodePipeline** and defines **`BuildOutput`**. The repo root **`buildspec.yml`** defaults to **no `artifacts:`** so it matches starter projects with **No artifacts**. After you deploy this stack, append something like the following after the `build` phase (and push), or validation/build will fail:
 
 ```yaml
 artifacts:
