@@ -1,6 +1,14 @@
 # AWS CodeBuild - Yarn + Next.js (see docs/aws-codepipeline-github.md).
-# CodeBuild Buildspec must be strict YAML: ASCII comments only, booleans as true/false.
-
+#
+# If CodeBuild "Artifacts" is "No artifacts", you MUST NOT declare an `artifacts:` block
+# in this file (AWS rejects it as invalid YAML / invalid buildspec).
+#
+# CodePipeline deploy: set CodeBuild artifact type to "CodePipeline" and add back:
+#   artifacts:
+#     files:
+#       - '**/*'
+#     base-directory: ...
+#
 version: 0.2
 
 env:
@@ -50,19 +58,7 @@ phases:
         echo "Running yarn build"
         yarn build
 
-  post_build:
-    commands:
-      - |
-        set -e
-        TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-        echo "build finished ${TS}" > "$CODEBUILD_SRC_DIR/codebuild-build-marker.txt"
-
 cache:
   paths:
     - node_modules/**/*
     - romainRetreatCMS/node_modules/**/*
-
-artifacts:
-  files:
-    - codebuild-build-marker.txt
-  discard-paths: true

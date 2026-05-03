@@ -101,6 +101,12 @@ Avoid committing **both** `yarn.lock` and `package-lock.json` out of sync; pick 
 
 Those templates often default to **npm** and a minimal install. Either switch **Install commands** to **`yarn install --frozen-lockfile`** (after `corepack enable`) or apply the optional-deps fixes above.
 
+### “Invalid input: buildspec must be a valid YAML file” with **Artifacts: No artifacts**
+
+If the CodeBuild project primary artifact is **No artifacts**, the buildspec file **must not** contain an **`artifacts:`** section. AWS treats that mismatch as an invalid buildspec (the error message mentions YAML).
+
+Either remove **`artifacts:`** from `buildspec.yml` (current default in this repo for starter-style projects), or change the project to **Artifacts type: Amazon S3** / **CodePipeline** and declare **`artifacts:`** again when the pipeline needs a build output.
+
 ### Logs still say `npm run build --if-present`
 
 That means CodeBuild is **not using** the repo’s **`buildspec.yml`** (it’s using the starter “managed” commands).
