@@ -4,9 +4,7 @@
 #
 version: "0.2"
 
-env:
-  variables:
-    NODE_ENV: development
+# Do not set NODE_ENV=development here — `next build` expects production (or unset); development breaks prerender of /404 and /500.
 
 phases:
   install:

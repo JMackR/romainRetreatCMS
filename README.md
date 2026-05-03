@@ -19,7 +19,7 @@ Payload admin and Next.js app. This project intentionally keeps a **fixed stack*
 
 ## Quick start
 
-1. `cp .env.example .env` and set `PAYLOAD_SECRET`, `DATABASE_URL` (Postgres, e.g. from `romainRetreatServer`’s `yarn db:start` + the URL in `.env.example`).
+1. Env: either `cp .env.local.example .env.local` or `cp .env.example .env`, then set `PAYLOAD_SECRET`, `DATABASE_URL` (Postgres, e.g. from `romainRetreatServer`’s `yarn db:start`). Committed defaults live in `.env.development` / `.env.production`; secrets stay in `.env.local` (or `.env`).
 
 2. `PAYLOAD_DATABASE_PUSH=1` on a **new** database until the schema exists; then use `0` in steady state.
 
