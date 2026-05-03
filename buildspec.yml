@@ -1,13 +1,7 @@
 # AWS CodeBuild - Yarn + Next.js (see docs/aws-codepipeline-github.md).
 #
-# If CodeBuild "Artifacts" is "No artifacts", you MUST NOT declare an `artifacts:` block
-# in this file (AWS rejects it as invalid YAML / invalid buildspec).
-#
-# CodePipeline deploy: set CodeBuild artifact type to "CodePipeline" and add back:
-#   artifacts:
-#     files:
-#       - '**/*'
-#     base-directory: ...
+# Default matches CodeBuild "No artifacts" (no `artifacts:` block below).
+# For CODEPIPELINE/S3 outputs or aws/codepipeline-github.yaml, add an `artifacts:` section.
 #
 version: 0.2
 
@@ -18,7 +12,7 @@ env:
 phases:
   install:
     runtime-versions:
-      nodejs: 20
+      nodejs: "20"
     commands:
       - |
         set -euxo pipefail

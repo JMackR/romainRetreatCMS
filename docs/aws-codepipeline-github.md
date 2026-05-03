@@ -41,6 +41,17 @@ aws cloudformation deploy \
 
 Stack outputs print `GitHubConnectionArn` and a console link to the pipeline.
 
+**CloudFormation vs console “No artifacts”:** This template sets CodeBuild artifacts to **CodePipeline** and defines **`BuildOutput`**. The repo root **`buildspec.yml`** defaults to **no `artifacts:`** so it matches starter projects with **No artifacts**. After you deploy this stack, append something like the following before `cache:` (and push), or validation/build will fail:
+
+```yaml
+artifacts:
+  files:
+    - "**/*"
+  exclude-paths:
+    - node_modules/**/*
+    - romainRetreatCMS/node_modules/**/*
+```
+
 ## 3. Authorize GitHub (required once)
 
 1. AWS Console → **Developer Tools** → **Settings** → **Connections** (or search **CodeStar connections**).
@@ -101,11 +112,18 @@ Avoid committing **both** `yarn.lock` and `package-lock.json` out of sync; pick 
 
 Those templates often default to **npm** and a minimal install. Either switch **Install commands** to **`yarn install --frozen-lockfile`** (after `corepack enable`) or apply the optional-deps fixes above.
 
-### “Invalid input: buildspec must be a valid YAML file” with **Artifacts: No artifacts**
+### “Invalid input: buildspec must be a valid YAML file” (artifact type vs `artifacts:`)
 
-If the CodeBuild project primary artifact is **No artifacts**, the buildspec file **must not** contain an **`artifacts:`** section. AWS treats that mismatch as an invalid buildspec (the error message mentions YAML).
+AWS validates the **whole** buildspec against your CodeBuild project settings. The console often labels failures as “YAML” even when the real issue is **artifacts**.
 
-Either remove **`artifacts:`** from `buildspec.yml` (current default in this repo for starter-style projects), or change the project to **Artifacts type: Amazon S3** / **CodePipeline** and declare **`artifacts:`** again when the pipeline needs a build output.
+| CodeBuild primary artifacts | Pipeline build action output artifact(s) | `buildspec.yml` |
+|------------------------------|------------------------------------------|-----------------|
+| **No artifacts** | None | **Do not** declare an **`artifacts:`** block. |
+| **CodePipeline** or **Amazon S3** | Usually one or more (e.g. `BuildOutput`) | **Must** declare **`artifacts:`** (see repo `buildspec.yml`). |
+
+This repo’s [`aws/codepipeline-github.yaml`](../aws/codepipeline-github.yaml) uses **CODEPIPELINE** artifacts and **`BuildOutput`**, so the checked-in **`buildspec.yml` includes `artifacts:`**. If your CodeBuild project is still **No artifacts**, either switch it to **CodePipeline** to match the file, or delete the **`artifacts:`** block (and any pipeline output that expects a build artifact).
+
+Also confirm **Buildspec name** matches Git (e.g. `buildspec.yml` vs `romainRetreatCMS/buildspec.yml`) and you are not pasting a fragment into **Buildspec override** in the pipeline action.
 
 ### Logs still say `npm run build --if-present`
 
