@@ -5,11 +5,12 @@ This project ships:
 | File | Purpose |
 |------|---------|
 | [`buildspec.yml`](../buildspec.yml) | CodeBuild install + `yarn build` (supports CMS-at-root **or** `romainRetreatCMS/` monorepo folder). |
-| [`aws/codepipeline-github.yaml`](../aws/codepipeline-github.yaml) | CloudFormation: S3 artifact bucket, **CodeStar Connection** (GitHub), CodeBuild project, CodePipeline (**Source → Build**). |
+| [`aws/codepipeline-github.yaml`](../aws/codepipeline-github.yaml) | CloudFormation: S3 artifact bucket, **CodeStar Connection** (GitHub), **two** CodeBuild projects (`yarn build` + **Docker → ECR**), CodePipeline (**Source → Build → DockerBuild**). |
+| [`buildspec.docker.yml`](../buildspec.docker.yml) | Second stage: `docker build` / push to **ECR**, writes **`imagedefinitions.json`** for a later **ECS deploy** action. |
 | [`Dockerfile`](../Dockerfile) | Production container (`next build` **standalone**) for ECS / App Runner / EC2. |
 | [`aws-cms-hosting.md`](./aws-cms-hosting.md) | ALB + Route 53 + ECS outline for **`cms.rrcliving.com`**. |
 
-The pipeline **only runs CI** (verify the Next.js app builds). It does **not** deploy the container by default — add a **Deploy** stage (ECR push + ECS) or run [`aws-cms-hosting.md`](./aws-cms-hosting.md) manually.
+The first stage **CI** runs `yarn build`. The **DockerBuild** stage pushes an image to **ECR** and emits **`DockerImageDef`** (contains `imagedefinitions.json`). Add an **Amazon ECS (Standard)** deploy action to the pipeline (input artifact `DockerImageDef`) when your cluster/service exists — see **§5** in [`aws-cms-hosting.md`](./aws-cms-hosting.md). **Create the ECR repository** (same name as `EcrRepositoryName`, default `romain-retreat-cms`) **before** the Docker stage can succeed.
 
 ## 1. Prerequisites
 
@@ -34,8 +35,12 @@ aws cloudformation deploy \
     GitHubOwner=YOUR_GITHUB_USER_OR_ORG \
     GitHubRepo=YOUR_REPO_NAME \
     BranchName=main \
-    BuildSpecRelativePath=buildspec.yml
+    BuildSpecRelativePath=buildspec.yml \
+    EcrRepositoryName=romain-retreat-cms \
+    EcsContainerName=cms
 ```
+
+`EcrRepositoryName` must match an **existing** ECR repo in the same account/region. `EcsContainerName` must match the **container name** in your ECS task definition when you add the ECS deploy step.
 
 **Monorepo:** keep `BuildSpecRelativePath=buildspec.yml` only if that file lives at the **GitHub repo root**. If you keep `buildspec.yml` only under `romainRetreatCMS/` in Git, set:
 
@@ -43,16 +48,7 @@ aws cloudformation deploy \
 
 Stack outputs print `GitHubConnectionArn` and a console link to the pipeline.
 
-**CloudFormation vs console “No artifacts”:** This template sets CodeBuild artifacts to **CodePipeline** and defines **`BuildOutput`**. The repo root **`buildspec.yml`** defaults to **no `artifacts:`** so it matches starter projects with **No artifacts**. After you deploy this stack, append something like the following after the `build` phase (and push), or validation/build will fail:
-
-```yaml
-artifacts:
-  files:
-    - "**/*"
-  exclude-paths:
-    - node_modules/**/*
-    - romainRetreatCMS/node_modules/**/*
-```
+**Artifacts:** This template uses **CodePipeline** artifacts for both CodeBuild projects. Repo **`buildspec.yml`** includes an **`artifacts:`** block compatible with **`BuildOutput`**; **`buildspec.docker.yml`** outputs **`DockerImageDef`** with **`imagedefinitions.json`** only.
 
 ## 3. Authorize GitHub (required once)
 

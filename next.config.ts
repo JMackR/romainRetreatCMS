@@ -67,9 +67,14 @@ const s3MediaRemotePatterns = (() => {
 })()
 
 const resolvePublicSiteUrl = (): string => {
+  const vercelProd =
+    process.env.VERCEL_ENV === 'production' &&
+    process.env.VERCEL_PROJECT_PRODUCTION_URL &&
+    `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/^https?:\/\//i, '')}`
   const raw =
     process.env.NEXT_PUBLIC_SERVER_URL ||
     process.env.PAYLOAD_SERVER_URL ||
+    vercelProd ||
     process.env.__NEXT_PRIVATE_ORIGIN
   if (raw) {
     const trimmed = raw.replace(/\/$/, '')

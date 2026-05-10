@@ -1,0 +1,54 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    command: sleep infinity
+    init: true
+    volumes:
+      - ..:/workspaces/romainRetreatCMS:cached
+    working_dir: /workspaces/romainRetreatCMS
+    ports:
+      - '3002:3002'
+    environment:
+      DATABASE_URL: postgresql://payload:payload@postgres:5432/payload
+      PORT: '3002'
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_SERVER_URL: http://localhost:3002
+      PAYLOAD_SERVER_URL: http://localhost:3002
+      PAYLOAD_DATABASE_PUSH: '1'
+      ROMAIN_RETREAT_SERVER_URL: http://host.docker.internal:4000
+      ROMAIN_RETREAT_SERVER_GRAPHQL_PATH: /
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cms-dev
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: payload
+      POSTGRES_PASSWORD: payload
+      POSTGRES_DB: payload
+    ports:
+      - '5434:5432'
+    volumes:
+      - cms-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U payload -d payload']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    networks:
+      - cms-dev
+
+volumes:
+  cms-pgdata:
+
+networks:
+  cms-dev:

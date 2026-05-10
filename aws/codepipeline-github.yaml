@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-  GitHub → CodePipeline → CodeBuild for romainRetreatCMS (Next.js + Payload).
-  Uses AWS CodeStar Connections (OAuth to GitHub). Complete the connection in the
-  console before the pipeline can run. Buildspec defaults to buildspec.yml at repo root.
+  GitHub → CodePipeline → CodeBuild (Next.js yarn build) → CodeBuild (Docker → ECR) for romainRetreatCMS.
+  Uses AWS CodeStar Connections (OAuth to GitHub). Complete the connection in the console before the
+  pipeline can run. ECR repository named in EcrRepositoryName must exist before Docker pushes succeed.
 
 Parameters:
   GitHubOwner:
@@ -19,6 +19,15 @@ Parameters:
     Type: String
     Default: buildspec.yml
     Description: Path from repository root to the CodeBuild buildspec file.
+  EcrRepositoryName:
+    Type: String
+    Default: romain-retreat-cms
+    Description: >-
+      ECR repository name (must already exist in this account/region before the Docker stage can push).
+  EcsContainerName:
+    Type: String
+    Default: cms
+    Description: Container name in imagedefinitions.json; must match your ECS task definition when you add an ECS deploy action.
 
 Resources:
   ArtifactStoreBucket:
@@ -72,7 +81,9 @@ Resources:
                 Action:
                   - codebuild:BatchGetBuilds
                   - codebuild:StartBuild
-                Resource: !GetAtt CodeBuildProject.Arn
+                Resource:
+                  - !GetAtt CodeBuildProject.Arn
+                  - !GetAtt DockerCodeBuildProject.Arn
               - Effect: Allow
                 Action:
                   - codestar-connections:UseConnection
@@ -110,6 +121,52 @@ Resources:
                   - s3:PutObject
                 Resource: !Sub '${ArtifactStoreBucket.Arn}/*'
 
+  DockerCodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DockerBuildPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !GetAtt ArtifactStoreBucket.Arn
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource: !Sub '${ArtifactStoreBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: !Sub 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${EcrRepositoryName}'
+
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -127,6 +184,34 @@ Resources:
       Source:
         Type: CODEPIPELINE
         Buildspec: !Ref BuildSpecRelativePath
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+
+  DockerCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub '${AWS::StackName}-docker-build'
+      ServiceRole: !GetAtt DockerCodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: IMAGE_REPO_NAME
+            Value: !Ref EcrRepositoryName
+          - Name: ECS_CONTAINER_NAME
+            Value: !Ref EcsContainerName
+      Source:
+        Type: CODEPIPELINE
+        Buildspec: buildspec.docker.yml
       LogsConfig:
         CloudWatchLogs:
           Status: ENABLED
@@ -172,6 +257,21 @@ Resources:
               OutputArtifacts:
                 - Name: BuildOutput
               RunOrder: 1
+        - Name: DockerBuild
+          Actions:
+            - Name: DockerImage
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref DockerCodeBuildProject
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: DockerImageDef
+              RunOrder: 1
 
 Outputs:
   ArtifactBucketName:
@@ -182,6 +282,9 @@ Outputs:
     Value: !Ref GitHubConnection
   CodeBuildProjectName:
     Value: !Ref CodeBuildProject
+  DockerCodeBuildProjectName:
+    Description: Privileged project that builds and pushes the Dockerfile to ECR.
+    Value: !Ref DockerCodeBuildProject
   PipelineName:
     Value: !Ref Pipeline
   ConsolePipelineDeepLink:

@@ -1,0 +1,31 @@
+{
+  "name": "romainRetreatCMS",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/romainRetreatCMS",
+  "shutdownAction": "stopCompose",
+
+  "forwardPorts": [3002, 5434],
+  "portsAttributes": {
+    "3002": {
+      "label": "Next.js / Payload",
+      "onAutoForward": "notify"
+    },
+    "5434": {
+      "label": "Postgres (CMS dev container)",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  },
+
+  "postCreateCommand": "yarn install --frozen-lockfile --network-timeout 300000",
+  "remoteUser": "node"
+}

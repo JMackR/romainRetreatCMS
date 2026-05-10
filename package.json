@@ -8,6 +8,8 @@
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs 2>/dev/null || true",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "dev:fullstack": "tsx scripts/run-next-dev.mts fullstack",
+    "dev:ui": "tsx scripts/run-next-dev.mts ui",
     "devsafe": "rm -rf .next && cross-env NODE_OPTIONS=--no-deprecation next dev",
     "db:push": "cross-env NODE_OPTIONS=--no-deprecation PAYLOAD_DATABASE_PUSH=1 tsx scripts/sync-postgres.mts",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
